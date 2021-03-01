@@ -3,6 +3,7 @@ const bodyParser= require('body-parser');
 const Videos= require('../models/video');
 const fs= require('fs');
 const multer= require('multer');
+const multerS3= require('multer-s3');
 var AWS= require('aws-sdk');
 var authenticate= require('../authenticate');
 
@@ -32,7 +33,18 @@ const storage=multer.diskStorage({
 });
 
 const upload= multer({
-    storage:storage
+    storage:multerS3({
+        s3:S3_Upload,
+        bucket:process.env.AWS_BUCKET_NAME,
+        key:(req,file,cb)=>{
+            let videoFile= file.originalname.split(".");
+            let fileType= videoFile[videoFile.length-1];
+            cb(null,`${videoFile[0]}.${fileType}`);
+        },
+        contentType:(req,file,cb)=>{
+            cb(null,file.mimetype);
+        }
+    })
 });
 
 
@@ -43,8 +55,26 @@ videoRouter.route('/clickUpload').post(upload.single('videoSnap'),authenticate.v
     let document= JSON.parse(req.body.document);
 
     console.log(document);
+
+    Videos.create({
+        "title":document.title,
+        "description":document.description,
+        "category":document.category,
+        "video":req.file.location,
+        "uploader":req.user._id,
+        "comments":[]
+    }).then((info)=>{
+        res.statusCode=200;
+        res.setHeader('Content-Type','Application/json');
+        res.json({
+            status:"Successfully added to database",
+            data:req.file,
+            dbInfo:info
+        }); 
+    }).catch((err)=>next(err));
+
     
-    let videoFile= req.file.originalname.split(".");
+    /*let videoFile= req.file.originalname.split(".");
     let fileType= videoFile[videoFile.length-1];
 
     console.log(req.file.path);
@@ -87,7 +117,7 @@ videoRouter.route('/clickUpload').post(upload.single('videoSnap'),authenticate.v
             }).catch((err)=>next(err));
         }
 
-    });
+    });*/
 });
 
 videoRouter.route('/clickDownload').get((req,res,next)=>{
