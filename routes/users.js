@@ -73,12 +73,13 @@ router.route('/checkValidity/:token').get((req,res,next)=>{
     try 
     {
       let data= authenticate.verifyJwtToken(req.params.token);
+      console.log(data);
       res.statusCode=200;
       res.setHeader('Content-Type','Application/json');
       res.json({
         message:'Token Valid',
         success:"true",
-        token:token
+        token:req.params.token
       });  
     } 
     catch (error) 
