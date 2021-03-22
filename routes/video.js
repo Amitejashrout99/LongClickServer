@@ -39,6 +39,22 @@ const upload= multer({
         key:(req,file,cb)=>{
             let videoFile= file.originalname.split(".");
             let fileType= videoFile[videoFile.length-1];
+            console.log(req);
+            cb(null,`${req.user._id}${videoFile[0]}.${fileType}`);
+        },
+        contentType:(req,file,cb)=>{
+            cb(null,file.mimetype);
+        }
+    })
+});
+
+const thumbnailUpload= multer({
+    storage:multerS3({
+        s3:S3_Upload,
+        bucket:process.env.AWS_BUCKET_NAME,
+        key:(req,file,cb)=>{
+            let videoFile= file.originalname.split(".");
+            let fileType= videoFile[videoFile.length-1];
             cb(null,`${videoFile[0]}.${fileType}`);
         },
         contentType:(req,file,cb)=>{
@@ -48,7 +64,84 @@ const upload= multer({
 });
 
 
-videoRouter.route('/clickUpload').post(upload.single('videoSnap'),authenticate.verifyUser,(req,res,next)=>{
+videoRouter.route('/clickThumbnailUpload/:clickId').put(authenticate.verifyUser,thumbnailUpload.single('thumbnail'),(req,res,next)=>{
+    console.log(req.file);
+    console.log(req.user);
+
+    Videos.findById(req.params.clickId).then((video)=>{
+        if(video!=null)
+        {
+            video.thumbnail=req.file.location;
+            video.save().then((video)=>{
+                res.statusCode=200;
+                res.setHeader('Content-Type','application/json');
+                res.json({
+                    status:"Success",
+                    message:"Thumbnail successfully added",
+                    data:video
+                });
+            }).catch((error)=>{
+                next(error);
+            });
+        }
+        else{
+            res.statusCode=404;
+            res.setHeader('Content-Type','application/json');
+            res.json({
+                status:"Failure",
+                message:"No Video found for this id"
+            });
+        }
+    }).catch((error)=>{
+        next(error);
+    });
+    
+});
+
+videoRouter.route('/clickThumbnailDownload/:clickId').get((req,res,next)=>{
+    Videos.findById(req.params.clickId).then((video)=>{
+        if(video!=null)
+        {
+            let thumbnailKey= video.thumbnail.split('/')[3];
+            var getParams = {
+                Bucket:process.env.AWS_BUCKET_NAME, // your bucket name,
+                Key: thumbnailKey // path to the object you're looking for
+            };
+
+            console.log(getParams);
+
+            S3_Download.getSignedUrl('getObject',getParams,(error,url)=>{
+                if(error)
+                {
+                    var err= new Error("Failed to get the signed url "+ error);
+                    err.status=500;
+                    throw next(err);
+                }
+                else{
+                    res.statusCode=200;
+                    res.setHeader('Content-Type','Application/json');
+                    res.json({
+                        status:"Signed URL Obtained",
+                        url:url
+                    });
+                }
+            });
+        }
+        else{
+            res.statusCode=404;
+            res.setHeader('Content-Type','application/json');
+            res.json({
+                status:"No Click Found for this click Id"
+            });
+        }
+    }).catch((error)=>{
+        next(error);
+    })
+})
+
+
+
+videoRouter.route('/clickUpload').post(authenticate.verifyUser,upload.single('videoSnap'),(req,res,next)=>{
     console.log(req.file);
     console.log(req.user);
     

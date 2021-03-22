@@ -12,6 +12,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var videoRouter= require('./routes/video');
 var favouriteRouter= require('./routes/favouriteRouter');
+var friendRouter= require('./routes/friendRouter');
 
 
 const url='mongodb+srv://ommrout:Kalpananivas@cluster0.ea30y.mongodb.net/longClickDb';
@@ -46,6 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/users', usersRouter);
 app.use('/click',videoRouter);
 app.use('/favourite',favouriteRouter);
+app.use('/friend',friendRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

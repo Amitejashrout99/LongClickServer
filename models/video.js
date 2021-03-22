@@ -38,6 +38,11 @@ const videoSchema= new Schema({
     },
     video:{
         type:String,
+        default:""
+    },
+    thumbnail:{
+        type:String,
+        default:""
     },
     uploader:{
         type:mongoose.Schema.Types.ObjectId,
